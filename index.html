@@ -1,0 +1,2345 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Grab Your Valentine's Gift!</title>
+  <link rel="icon" type="image/png" href="icon/hearticon.png">
+  <meta name="description" content="A retro pixel-art Valentine's claw machine game">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    /* ===== RESET & BASE ===== */
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      image-rendering: pixelated;
+      -webkit-font-smoothing: none;
+      -moz-osx-font-smoothing: none;
+    }
+
+    :root {
+      /* DARK NEON ARCADE PALETTE */
+      --bg: #231720;
+      --machine: #F5E6D3;
+      /* Warm Cream body */
+      --machine-shadow: #D4B896;
+      /* Cream shadow */
+      --outline: #4A192C;
+      /* Deep Merlot */
+      --screen: #2D2436;
+      /* Deep Purple-Grey */
+      --heart: #FF4D7D;
+      /* Neon Pink */
+      --heart-hi: #FFA6C0;
+      /* Pastel Pink */
+      --btn-dir: #B05476;
+      --btn-grab: #E04876;
+      --gold: #FFD700;
+      /* Arcade Gold */
+      --cyan: #4DEEEA;
+      /* Electric Cyan */
+      --neon-amber: #FFBF00;
+      /* Amber neon */
+
+      --grid: 4px;
+      font-family: 'Press Start 2P', monospace;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg);
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ===== WRAPPER ===== */
+    #game-wrapper {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 390px;
+      height: 844px;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ===== NEON LIGHT ABOVE MACHINE ===== */
+    #neon-light {
+      width: 280px;
+      height: 8px;
+      background-color: var(--neon-amber);
+      border-radius: 4px;
+      margin-bottom: 12px;
+      position: relative;
+      box-shadow:
+        0 0 8px var(--neon-amber),
+        0 0 20px var(--neon-amber),
+        0 0 40px rgba(255, 191, 0, 0.5),
+        0 0 80px rgba(255, 191, 0, 0.25),
+        0 4px 20px rgba(255, 191, 0, 0.4);
+    }
+
+    /* Neon flicker animation */
+    @keyframes neon-flicker {
+
+      0%,
+      95%,
+      100% {
+        opacity: 1;
+      }
+
+      96% {
+        opacity: 0.85;
+      }
+
+      97% {
+        opacity: 1;
+      }
+
+      98% {
+        opacity: 0.9;
+      }
+    }
+
+    #neon-light {
+      animation: neon-flicker 4s ease-in-out infinite;
+    }
+
+    /* Neon glow cast on machine top */
+    #neon-light::after {
+      content: '';
+      position: absolute;
+      bottom: -20px;
+      left: 10%;
+      width: 80%;
+      height: 20px;
+      background: linear-gradient(to bottom, rgba(255, 191, 0, 0.3), transparent);
+      pointer-events: none;
+    }
+
+    /* ===== MACHINE BODY ===== */
+    #machine {
+      width: 320px;
+      background-color: var(--machine);
+      border: 4px solid var(--outline);
+      outline: 1px solid var(--outline);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-bottom: 12px;
+    }
+
+    /* Glass window */
+    #glass-window {
+      width: calc(100% - 24px);
+      height: 320px;
+      margin-top: 12px;
+      background-color: var(--screen);
+      border: 4px solid var(--outline);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Inner glass grid lines */
+    #glass-window::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image:
+        repeating-linear-gradient(0deg,
+          transparent,
+          transparent 39px,
+          var(--outline) 39px,
+          var(--outline) 40px),
+        repeating-linear-gradient(90deg,
+          transparent,
+          transparent 39px,
+          var(--outline) 39px,
+          var(--outline) 40px);
+      opacity: 0.12;
+      pointer-events: none;
+    }
+
+    /* ===== CLAW RAIL ===== */
+    #claw-rail {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 16px;
+      background-color: var(--cyan);
+      box-shadow: 0 2px 8px rgba(77, 238, 234, 0.4);
+    }
+
+    /* ===== CLAW ASSEMBLY ===== */
+    #claw-assembly {
+      position: absolute;
+      top: 0;
+      left: 120px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: left 0.15s steps(4);
+      z-index: 5;
+    }
+
+    #claw-assembly.dropping {
+      transition: none;
+    }
+
+    /* Claw rope */
+    #claw-rope {
+      width: 4px;
+      height: 16px;
+      background-color: var(--cyan);
+      transition: height 0.3s steps(8);
+      box-shadow: 0 0 6px rgba(77, 238, 234, 0.5);
+    }
+
+    #claw-assembly.dropping #claw-rope {
+      transition: height 0.3s steps(8);
+    }
+
+    /* Claw head */
+    #claw-head {
+      position: relative;
+      width: 40px;
+      height: 12px;
+      background-color: var(--cyan);
+      box-shadow: 0 0 8px rgba(77, 238, 234, 0.5);
+    }
+
+    /* Claw prongs */
+    .claw-prong {
+      position: absolute;
+      bottom: -20px;
+      width: 8px;
+      height: 20px;
+      background-color: var(--cyan);
+    }
+
+    .claw-prong.left {
+      left: 2px;
+      border-bottom-left-radius: 0;
+    }
+
+    .claw-prong.left::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 12px;
+      height: 8px;
+      background-color: var(--cyan);
+    }
+
+    .claw-prong.right {
+      right: 2px;
+    }
+
+    .claw-prong.right::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 12px;
+      height: 8px;
+      background-color: var(--cyan);
+    }
+
+    /* Claw grabbing state */
+    #claw-assembly.grabbed .claw-prong.left {
+      transform: rotate(12deg);
+    }
+
+    #claw-assembly.grabbed .claw-prong.right {
+      transform: rotate(-12deg);
+    }
+
+    #claw-assembly.grabbed .claw-prong.left::after {
+      transform: rotate(8deg);
+    }
+
+    #claw-assembly.grabbed .claw-prong.right::after {
+      transform: rotate(-8deg);
+    }
+
+    /* ===== CAPSULES (Pixel hearts) ===== */
+    .capsule {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      z-index: 2;
+      will-change: transform;
+    }
+
+    .capsule::before {
+      content: '';
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background-color: var(--heart);
+    }
+
+    .capsule-heart {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 4px;
+    }
+
+    .capsule.color-pink .capsule-heart {
+      background: var(--heart-hi);
+      box-shadow:
+        4px 0 0 0 var(--heart-hi),
+        8px 0 0 0 var(--heart-hi),
+        12px 0 0 0 var(--heart-hi),
+        16px 0 0 0 var(--heart-hi),
+        20px 0 0 0 var(--heart-hi),
+        -4px 4px 0 0 var(--heart-hi),
+        0px 4px 0 0 var(--heart-hi),
+        4px 4px 0 0 var(--heart-hi),
+        8px 4px 0 0 var(--heart-hi),
+        12px 4px 0 0 var(--heart-hi),
+        16px 4px 0 0 var(--heart-hi),
+        20px 4px 0 0 var(--heart-hi),
+        24px 4px 0 0 var(--heart-hi),
+        -4px 8px 0 0 var(--heart-hi),
+        0px 8px 0 0 var(--heart-hi),
+        4px 8px 0 0 var(--heart-hi),
+        8px 8px 0 0 var(--heart-hi),
+        12px 8px 0 0 var(--heart-hi),
+        16px 8px 0 0 var(--heart-hi),
+        20px 8px 0 0 var(--heart-hi),
+        24px 8px 0 0 var(--heart-hi),
+        0px 12px 0 0 var(--heart-hi),
+        4px 12px 0 0 var(--heart-hi),
+        8px 12px 0 0 var(--heart-hi),
+        12px 12px 0 0 var(--heart-hi),
+        16px 12px 0 0 var(--heart-hi),
+        20px 12px 0 0 var(--heart-hi),
+        4px 16px 0 0 var(--heart-hi),
+        8px 16px 0 0 var(--heart-hi),
+        12px 16px 0 0 var(--heart-hi),
+        16px 16px 0 0 var(--heart-hi),
+        8px 20px 0 0 var(--heart-hi),
+        12px 20px 0 0 var(--heart-hi);
+    }
+
+    .capsule.color-rose .capsule-heart {
+      background: var(--heart);
+      box-shadow:
+        4px 0 0 0 var(--heart),
+        8px 0 0 0 var(--heart),
+        12px 0 0 0 var(--heart),
+        16px 0 0 0 var(--heart),
+        20px 0 0 0 var(--heart),
+        -4px 4px 0 0 var(--heart),
+        0px 4px 0 0 var(--heart),
+        4px 4px 0 0 var(--heart),
+        8px 4px 0 0 var(--heart),
+        12px 4px 0 0 var(--heart),
+        16px 4px 0 0 var(--heart),
+        20px 4px 0 0 var(--heart),
+        24px 4px 0 0 var(--heart),
+        -4px 8px 0 0 var(--heart),
+        0px 8px 0 0 var(--heart),
+        4px 8px 0 0 var(--heart),
+        8px 8px 0 0 var(--heart),
+        12px 8px 0 0 var(--heart),
+        16px 8px 0 0 var(--heart),
+        20px 8px 0 0 var(--heart),
+        24px 8px 0 0 var(--heart),
+        0px 12px 0 0 var(--heart),
+        4px 12px 0 0 var(--heart),
+        8px 12px 0 0 var(--heart),
+        12px 12px 0 0 var(--heart),
+        16px 12px 0 0 var(--heart),
+        20px 12px 0 0 var(--heart),
+        4px 16px 0 0 var(--heart),
+        8px 16px 0 0 var(--heart),
+        12px 16px 0 0 var(--heart),
+        16px 16px 0 0 var(--heart),
+        8px 20px 0 0 var(--heart),
+        12px 20px 0 0 var(--heart);
+    }
+
+    .capsule.color-lavender .capsule-heart {
+      background: var(--gold);
+      box-shadow:
+        4px 0 0 0 var(--gold),
+        8px 0 0 0 var(--gold),
+        12px 0 0 0 var(--gold),
+        16px 0 0 0 var(--gold),
+        20px 0 0 0 var(--gold),
+        -4px 4px 0 0 var(--gold),
+        0px 4px 0 0 var(--gold),
+        4px 4px 0 0 var(--gold),
+        8px 4px 0 0 var(--gold),
+        12px 4px 0 0 var(--gold),
+        16px 4px 0 0 var(--gold),
+        20px 4px 0 0 var(--gold),
+        24px 4px 0 0 var(--gold),
+        -4px 8px 0 0 var(--gold),
+        0px 8px 0 0 var(--gold),
+        4px 8px 0 0 var(--gold),
+        8px 8px 0 0 var(--gold),
+        12px 8px 0 0 var(--gold),
+        16px 8px 0 0 var(--gold),
+        20px 8px 0 0 var(--gold),
+        24px 8px 0 0 var(--gold),
+        0px 12px 0 0 var(--gold),
+        4px 12px 0 0 var(--gold),
+        8px 12px 0 0 var(--gold),
+        12px 12px 0 0 var(--gold),
+        16px 12px 0 0 var(--gold),
+        20px 12px 0 0 var(--gold),
+        4px 16px 0 0 var(--gold),
+        8px 16px 0 0 var(--gold),
+        12px 16px 0 0 var(--gold),
+        16px 16px 0 0 var(--gold),
+        8px 20px 0 0 var(--gold),
+        12px 20px 0 0 var(--gold);
+    }
+
+    .capsule.color-cyan .capsule-heart {
+      background: var(--cyan);
+      box-shadow:
+        4px 0 0 0 var(--cyan),
+        8px 0 0 0 var(--cyan),
+        12px 0 0 0 var(--cyan),
+        16px 0 0 0 var(--cyan),
+        20px 0 0 0 var(--cyan),
+        -4px 4px 0 0 var(--cyan),
+        0px 4px 0 0 var(--cyan),
+        4px 4px 0 0 var(--cyan),
+        8px 4px 0 0 var(--cyan),
+        12px 4px 0 0 var(--cyan),
+        16px 4px 0 0 var(--cyan),
+        20px 4px 0 0 var(--cyan),
+        24px 4px 0 0 var(--cyan),
+        -4px 8px 0 0 var(--cyan),
+        0px 8px 0 0 var(--cyan),
+        4px 8px 0 0 var(--cyan),
+        8px 8px 0 0 var(--cyan),
+        12px 8px 0 0 var(--cyan),
+        16px 8px 0 0 var(--cyan),
+        20px 8px 0 0 var(--cyan),
+        24px 8px 0 0 var(--cyan),
+        0px 12px 0 0 var(--cyan),
+        4px 12px 0 0 var(--cyan),
+        8px 12px 0 0 var(--cyan),
+        12px 12px 0 0 var(--cyan),
+        16px 12px 0 0 var(--cyan),
+        20px 12px 0 0 var(--cyan),
+        4px 16px 0 0 var(--cyan),
+        8px 16px 0 0 var(--cyan),
+        12px 16px 0 0 var(--cyan),
+        16px 16px 0 0 var(--cyan),
+        8px 20px 0 0 var(--cyan),
+        12px 20px 0 0 var(--cyan);
+    }
+
+    .capsule.color-white .capsule-heart {
+      background: #fff;
+      box-shadow:
+        4px 0 0 0 #fff,
+        8px 0 0 0 #fff,
+        12px 0 0 0 #fff,
+        16px 0 0 0 #fff,
+        20px 0 0 0 #fff,
+        -4px 4px 0 0 #fff,
+        0px 4px 0 0 #fff,
+        4px 4px 0 0 #fff,
+        8px 4px 0 0 #fff,
+        12px 4px 0 0 #fff,
+        16px 4px 0 0 #fff,
+        20px 4px 0 0 #fff,
+        24px 4px 0 0 #fff,
+        -4px 8px 0 0 #fff,
+        0px 8px 0 0 #fff,
+        4px 8px 0 0 #fff,
+        8px 8px 0 0 #fff,
+        12px 8px 0 0 #fff,
+        16px 8px 0 0 #fff,
+        20px 8px 0 0 #fff,
+        24px 8px 0 0 #fff,
+        0px 12px 0 0 #fff,
+        4px 12px 0 0 #fff,
+        8px 12px 0 0 #fff,
+        12px 12px 0 0 #fff,
+        16px 12px 0 0 #fff,
+        20px 12px 0 0 #fff,
+        4px 16px 0 0 #fff,
+        8px 16px 0 0 #fff,
+        12px 16px 0 0 #fff,
+        16px 16px 0 0 #fff,
+        8px 20px 0 0 #fff,
+        12px 20px 0 0 #fff;
+    }
+
+    /* ===== PRIZE SLOT ===== */
+    #prize-slot {
+      width: calc(100% - 48px);
+      height: 40px;
+      margin-top: 8px;
+      background-color: var(--outline);
+      border: 4px solid var(--outline);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #prize-slot::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 60px;
+      height: 24px;
+      background-color: var(--bg);
+      opacity: 0.15;
+    }
+
+    #prize-slot-label {
+      font-size: 6px;
+      color: var(--gold);
+      letter-spacing: 2px;
+    }
+
+    /* ===== CONTROLS PANEL (inside machine) ===== */
+    #controls-panel {
+      width: calc(100% - 24px);
+      margin-top: 8px;
+      padding: 8px 12px;
+      background-color: var(--machine-shadow);
+      border: 2px solid var(--outline);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    /* Left/Right buttons */
+    .ctrl-btn {
+      width: 40px;
+      height: 40px;
+      background-color: var(--btn-dir);
+      border: 2px solid var(--outline);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    .ctrl-btn:active {
+      background-color: var(--outline);
+    }
+
+    .ctrl-btn .arrow {
+      width: 0;
+      height: 0;
+      border-style: solid;
+    }
+
+    #btn-left .arrow {
+      border-width: 8px 12px 8px 0;
+      border-color: transparent var(--machine) transparent transparent;
+    }
+
+    #btn-right .arrow {
+      border-width: 8px 0 8px 12px;
+      border-color: transparent transparent transparent var(--machine);
+    }
+
+    /* Grab button (smaller) */
+    #btn-grab {
+      width: 56px;
+      height: 40px;
+      background-color: var(--btn-grab);
+      border: 3px solid var(--outline);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      position: relative;
+    }
+
+    #btn-grab:active {
+      background-color: var(--heart-hi);
+    }
+
+    #btn-grab .btn-label {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 6px;
+      color: var(--machine);
+      text-align: center;
+      line-height: 1.4;
+      pointer-events: none;
+    }
+
+    /* Pixel highlight on button */
+    #btn-grab::before {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 12px;
+      height: 3px;
+      background-color: var(--heart-hi);
+    }
+
+    /* Coin slot (compact) */
+    #coin-slot {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #coin-slot .coin {
+      width: 28px;
+      height: 28px;
+      background-color: var(--gold);
+      border: 3px solid var(--outline);
+    }
+
+    #coin-slot .coin-label {
+      font-size: 7px;
+      color: var(--outline);
+      letter-spacing: 1px;
+    }
+
+    /* ===== MESSAGE DISPLAY ===== */
+    #message {
+      margin-top: 12px;
+      font-size: 7px;
+      color: var(--heart);
+      text-align: center;
+      min-height: 20px;
+      letter-spacing: 1px;
+    }
+
+    /* ===== MACHINE FEET ===== */
+    #machine-feet {
+      display: flex;
+      justify-content: space-between;
+      width: 320px;
+    }
+
+    .machine-foot {
+      width: 32px;
+      height: 12px;
+      background-color: var(--outline);
+    }
+
+    /* ===== WIN ANIMATION ===== */
+    @keyframes float-up {
+      0% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+      }
+
+      100% {
+        transform: translateY(-60px) scale(1.5);
+        opacity: 0;
+      }
+    }
+
+    .win-heart {
+      position: absolute;
+      animation: float-up 0.8s steps(8) forwards;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    /* ===== BLINK ANIMATION ===== */
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0;
+      }
+    }
+
+    .blink {
+      animation: blink 0.6s steps(1) infinite;
+    }
+
+    /* Wiggle removed — physics handles capsule movement */
+
+    /* ===== PRIZE MODAL OVERLAY ===== */
+    #prize-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      animation: fadeIn 0.3s ease;
+      flex-direction: column;
+    }
+
+    #prize-modal-overlay.active {
+      display: flex;
+    }
+
+    /* Floating Gift Initial State */
+    .floating-gift-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      animation: floatIn 0.5s ease-out;
+      cursor: pointer;
+    }
+
+    .floating-gift-icon {
+      width: 120px;
+      height: 120px;
+      object-fit: contain;
+      animation: float 2s ease-in-out infinite;
+      filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
+    }
+
+    .click-hint {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      color: #fff;
+      animation: blink 1s steps(1) infinite;
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-15px);
+      }
+    }
+
+    @keyframes floatIn {
+      from {
+        transform: scale(0);
+        opacity: 0;
+      }
+
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+
+
+    @keyframes modalPop {
+      0% {
+        transform: scale(0.5);
+        opacity: 0;
+      }
+
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    #prize-modal .modal-badge {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      color: var(--gold);
+      letter-spacing: 2px;
+      text-align: center;
+      padding: 6px 12px;
+      border: 2px solid var(--gold);
+      background: rgba(255, 215, 0, 0.1);
+    }
+
+    #prize-modal .modal-badge.meme {
+      color: var(--cyan);
+      border-color: var(--cyan);
+      background: rgba(77, 238, 234, 0.1);
+    }
+
+    #prize-modal .modal-image {
+      width: 100%;
+      max-width: 240px;
+      /* Bigger image */
+      height: auto;
+      object-fit: contain;
+      image-rendering: auto;
+      /* Border removed as requested */
+    }
+
+    #prize-modal .modal-video {
+      max-width: 100%;
+      max-height: 220px;
+      border: 3px solid var(--outline);
+    }
+
+    /* Prize Modal (Unified) */
+    #prize-modal {
+      position: relative;
+      width: 500px;
+      /* Wider as requested */
+      max-width: 90vw;
+      max-height: 90vh;
+      /* Taller */
+      background: linear-gradient(135deg, var(--machine) 0%, var(--machine-shadow) 100%);
+      border: 4px solid var(--outline);
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      overflow-y: auto;
+      animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    #prize-modal .modal-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      color: var(--heart);
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    #prize-modal .modal-note {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      color: var(--outline);
+      text-align: center;
+      line-height: 2;
+      padding: 8px;
+      border-top: 2px dashed var(--outline);
+      max-width: 100%;
+      word-break: break-word;
+    }
+
+
+
+    #prize-modal .modal-link {
+      color: #0000EE;
+      text-decoration: underline;
+      font-size: 7px;
+      word-break: break-all;
+    }
+
+    #prize-modal .modal-close {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 24px;
+      height: 24px;
+      background: var(--outline);
+      border: 2px solid var(--heart);
+      color: var(--heart);
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    #prize-modal .modal-close:hover {
+      background: var(--heart);
+      color: var(--outline);
+    }
+
+    /* ===== PARTICLE EFFECTS ===== */
+    .particle {
+      position: fixed;
+      pointer-events: none;
+      z-index: 1001;
+      font-size: 16px;
+      animation: particleFall linear forwards;
+    }
+
+    @keyframes particleFall {
+      0% {
+        opacity: 1;
+        transform: translateY(0) rotate(0deg) scale(1);
+      }
+
+      100% {
+        opacity: 0;
+        transform: translateY(100vh) rotate(720deg) scale(0.3);
+      }
+    }
+
+    @keyframes sparkle {
+
+      0%,
+      100% {
+        opacity: 0;
+        transform: scale(0);
+      }
+
+      50% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .sparkle-particle {
+      position: fixed;
+      pointer-events: none;
+      z-index: 1001;
+      font-size: 12px;
+      animation: sparkle 0.8s ease-in-out forwards;
+    }
+
+    /* Zonk message style */
+    @keyframes zonkShake {
+
+      0%,
+      100% {
+        transform: translateX(0);
+      }
+
+      25% {
+        transform: translateX(-4px);
+      }
+
+      75% {
+        transform: translateX(4px);
+      }
+    }
+
+    .zonk-shake {
+      animation: zonkShake 0.3s steps(2) 3;
+    }
+
+    /* ===== PIXEL MUSIC PLAYER ===== */
+    #music-player {
+      width: 260px;
+      margin: 0 auto 6px;
+      background: var(--screen);
+      border: 3px solid var(--outline);
+      border-radius: 4px;
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      position: relative;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
+    }
+
+    #music-player .player-top {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    #music-player .player-controls {
+      display: flex;
+      gap: 3px;
+      flex-shrink: 0;
+    }
+
+    #music-player .player-controls button {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      width: 22px;
+      height: 22px;
+      border: 2px solid var(--outline);
+      background: var(--btn-dir);
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      line-height: 1;
+      transition: background 0.1s;
+    }
+
+    #music-player .player-controls button:active {
+      background: var(--btn-grab);
+      transform: scale(0.95);
+    }
+
+    #music-player .song-info {
+      flex: 1;
+      overflow: hidden;
+      white-space: nowrap;
+      position: relative;
+      height: 14px;
+    }
+
+    #music-player .song-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 6px;
+      color: var(--cyan);
+      display: inline-block;
+      animation: marquee 10s linear infinite;
+      position: absolute;
+      white-space: nowrap;
+    }
+
+    @keyframes marquee {
+      0% {
+        transform: translateX(100%);
+      }
+
+      100% {
+        transform: translateX(-100%);
+      }
+    }
+
+    #music-player .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--outline);
+      cursor: pointer;
+      position: relative;
+    }
+
+    #music-player .progress-fill {
+      height: 100%;
+      background: var(--heart);
+      width: 0%;
+      transition: width 0.3s linear;
+    }
+
+    #music-player .player-bottom {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    #music-player .player-time {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 5px;
+      color: var(--gold);
+      flex-shrink: 0;
+    }
+
+    #music-player .vol-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 40px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 2px;
+      outline: none;
+      margin-left: auto;
+    }
+
+    #music-player .vol-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 8px;
+      height: 8px;
+      background: var(--gold);
+      border: 1px solid var(--outline);
+      cursor: pointer;
+    }
+
+    #music-player .vol-icon {
+      font-size: 7px;
+      color: var(--gold);
+      cursor: pointer;
+    }
+
+    /* ===== CONGRATS SCREEN ===== */
+    #congrats-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      animation: fadeIn 0.5s ease;
+    }
+
+    #congrats-overlay.active {
+      display: flex;
+    }
+
+    #congrats-card {
+      background: linear-gradient(135deg, #FFE8EF 0%, #FFF0F5 50%, #FFE4E1 100%);
+      border: 6px solid var(--heart);
+      box-shadow: 0 0 40px rgba(255, 77, 125, 0.4), 0 0 80px rgba(255, 77, 125, 0.2);
+      padding: 32px 28px;
+      text-align: center;
+      max-width: 360px;
+      width: 90vw;
+      animation: modalPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+    }
+
+    #congrats-card .congrats-emoji {
+      font-size: 40px;
+      margin-bottom: 12px;
+      animation: float 2s ease-in-out infinite;
+    }
+
+    #congrats-card .congrats-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 14px;
+      color: var(--heart);
+      margin-bottom: 16px;
+      line-height: 2;
+    }
+
+    #congrats-card .congrats-name {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 11px;
+      color: var(--outline);
+      margin-bottom: 8px;
+      line-height: 2;
+    }
+
+    #congrats-card .congrats-msg {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      color: #555;
+      line-height: 2.2;
+      margin-bottom: 20px;
+    }
+
+    #congrats-card .restart-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      color: #fff;
+      background: var(--btn-grab);
+      border: 3px solid var(--outline);
+      padding: 10px 20px;
+      cursor: pointer;
+      animation: blink 1.5s steps(1) infinite;
+      transition: transform 0.1s;
+    }
+
+    #congrats-card .restart-btn:active {
+      transform: scale(0.95);
+    }
+
+    .confetti-piece {
+      position: fixed;
+      width: 8px;
+      height: 8px;
+      z-index: 2001;
+      pointer-events: none;
+      animation: confettiFall linear forwards;
+    }
+
+    @keyframes confettiFall {
+      0% {
+        transform: translateY(-10px) rotate(0deg);
+        opacity: 1;
+      }
+
+      100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="game-wrapper">
+    <!-- NEON LIGHT -->
+    <div id="neon-light"></div>
+
+    <!-- MUSIC PLAYER -->
+    <div id="music-player">
+      <div class="player-top">
+        <div class="player-controls">
+          <button id="mp-prev" aria-label="Previous">◀</button>
+          <button id="mp-play" aria-label="Play">▶</button>
+          <button id="mp-next" aria-label="Next">▶▶</button>
+        </div>
+        <div class="song-info">
+          <span class="song-title" id="mp-title">TAP PLAY</span>
+        </div>
+      </div>
+      <div class="progress-bar" id="mp-progress-bar">
+        <div class="progress-fill" id="mp-progress-fill"></div>
+      </div>
+      <div class="player-bottom">
+        <span class="player-time" id="mp-time">0:00 / 0:00</span>
+        <span class="vol-icon" id="mp-vol-icon">🔊</span>
+        <input type="range" class="vol-slider" id="mp-volume" min="0" max="100" value="50">
+      </div>
+    </div>
+
+    <!-- MACHINE -->
+    <div id="machine">
+      <!-- Glass window -->
+      <div id="glass-window">
+        <!-- Claw rail -->
+        <div id="claw-rail"></div>
+
+        <!-- Claw assembly -->
+        <div id="claw-assembly">
+          <div id="claw-rope"></div>
+          <div id="claw-head">
+            <div class="claw-prong left"></div>
+            <div class="claw-prong right"></div>
+          </div>
+        </div>
+
+        <!-- Capsules will be added by JS -->
+      </div>
+
+      <!-- Prize slot -->
+      <div id="prize-slot">
+        <span id="prize-slot-label">▼ PRIZE ▼</span>
+      </div>
+
+      <!-- Controls panel (inside machine) -->
+      <div id="controls-panel">
+        <button class="ctrl-btn" id="btn-left" aria-label="Move Left">
+          <span class="arrow"></span>
+        </button>
+
+        <button class="ctrl-btn" id="btn-right" aria-label="Move Right">
+          <span class="arrow"></span>
+        </button>
+
+        <button id="btn-grab" aria-label="Grab">
+          <span class="btn-label">GRAB<br>♥</span>
+        </button>
+
+        <div id="coin-slot">
+          <div class="coin"></div>
+          <span class="coin-label"><span id="coins">3</span></span>
+        </div>
+      </div>
+
+      <!-- Message -->
+      <div id="message" class="blink">INSERT COIN TO PLAY</div>
+    </div>
+
+    <!-- Machine feet -->
+    <div id="machine-feet">
+      <div class="machine-foot"></div>
+      <div class="machine-foot"></div>
+    </div>
+  </div>
+
+  <!-- Prize Modal -->
+  <div id="prize-modal-overlay"></div>
+
+  <!-- CONGRATS OVERLAY -->
+  <div id="congrats-overlay">
+    <div id="congrats-card">
+
+      <div class="congrats-title">CONGRATULATIONS!</div>
+      <div class="congrats-name">Happy Valentine's Day,<br>Ngoc Kim!</div>
+      <button class="restart-btn" id="restart-btn">▶ TAP TO PLAY AGAIN</button>
+    </div>
+  </div>
+
+  <script>
+    // ===== SOUND ENGINE (Web Audio API — 8-bit arcade sounds) =====
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function ensureAudio() {
+      if (!audioCtx) audioCtx = new AudioCtx();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    }
+
+    // Helper: play a note with given params
+    function playTone(freq, type, duration, vol = 0.15, ramp = true) {
+      const ctx = ensureAudio();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      gain.gain.setValueAtTime(vol, ctx.currentTime);
+      if (ramp) gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + duration);
+    }
+
+    // Helper: play a sequence of notes
+    function playSequence(notes, type = 'square', vol = 0.12) {
+      const ctx = ensureAudio();
+      let t = ctx.currentTime;
+      notes.forEach(([freq, dur]) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, t);
+        gain.gain.setValueAtTime(vol, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + dur);
+        t += dur;
+      });
+    }
+
+    // --- Sound: Claw move (short tick) ---
+    function sfxClawMove() {
+      playTone(800, 'square', 0.04, 0.08);
+    }
+
+    // --- Sound: Button press (grab) ---
+    function sfxButtonPress() {
+      const ctx = ensureAudio();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(400, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.1);
+    }
+
+    // --- Sound: Coin insert (3-note jingle) ---
+    function sfxCoinInsert() {
+      playSequence([
+        [880, 0.08],
+        [1100, 0.08],
+        [1320, 0.12],
+      ], 'square', 0.13);
+    }
+
+    // --- Sound: Claw dropping (descending whirr) ---
+    function sfxClawDrop() {
+      const ctx = ensureAudio();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(600, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.45);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.5);
+    }
+
+    // --- Sound: Claw grabbing (mechanical clamp) ---
+    function sfxClawGrab() {
+      const ctx = ensureAudio();
+      // Metallic clamp: quick frequency modulation
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(300, ctx.currentTime);
+      osc.frequency.setValueAtTime(500, ctx.currentTime + 0.04);
+      osc.frequency.setValueAtTime(250, ctx.currentTime + 0.08);
+      osc.frequency.setValueAtTime(400, ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.18);
+    }
+
+    // --- Sound: Claw retracting (ascending whirr) ---
+    function sfxClawRetract() {
+      const ctx = ensureAudio();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(150, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(500, ctx.currentTime + 0.35);
+      gain.gain.setValueAtTime(0.06, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.4);
+    }
+
+    // --- Sound: Win! (happy fanfare) ---
+    function sfxWin() {
+      playSequence([
+        [523, 0.1],  // C5
+        [659, 0.1],  // E5
+        [784, 0.1],  // G5
+        [1047, 0.15], // C6
+        [784, 0.08],  // G5
+        [1047, 0.25], // C6 (sustain)
+      ], 'square', 0.14);
+    }
+
+    // --- Sound: Miss (sad wobble) ---
+    function sfxMiss() {
+      playSequence([
+        [400, 0.12],
+        [300, 0.12],
+        [200, 0.2],
+      ], 'triangle', 0.10);
+    }
+
+    // --- Sound: No coins (error buzz) ---
+    function sfxError() {
+      const ctx = ensureAudio();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(150, ctx.currentTime);
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.setValueAtTime(0.001, ctx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.12, ctx.currentTime + 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.22);
+    }
+
+    // --- Sound: Prize reload (cascading drops) ---
+    function sfxReload() {
+      playSequence([
+        [1200, 0.06],
+        [1000, 0.06],
+        [800, 0.06],
+        [600, 0.06],
+        [500, 0.08],
+      ], 'triangle', 0.08);
+    }
+
+    // ===== PRIZE DEFINITIONS =====
+    const MEME_PRIZES = [
+      {
+        type: 'meme',
+        title: '🎁 A GIFT FOR YOU!',
+        content: 'link',
+        note: "Here's your gift:",
+        url: 'https://youtu.be/dQw4w9WgXcQ?si=hna0gD-7vsJd7MOA'
+      },
+      {
+        type: 'meme',
+        title: '😬 OOPS...',
+        content: 'image',
+        src: 'assets/memes/ehh sorry.jpeg',
+        note: 'Ehh.. nepal..'
+      },
+      {
+        type: 'meme',
+        title: '🐟 SURPRISE!',
+        content: 'video',
+        src: 'assets/memes/mentahan ikan lele joget.mp4'
+      },
+      {
+        type: 'meme',
+        title: '🐒 LOOK AT THIS!',
+        content: 'video',
+        src: 'assets/memes/mentahan monyet joget pandangan pertama.mp4'
+      },
+      {
+        type: 'meme',
+        title: '😂 HERE YOU GO!',
+        content: 'video',
+        src: 'assets/memes/nigg.mp4'
+      }
+    ];
+
+    const MAIN_PRIZES = [
+      {
+        type: 'main',
+        title: '💌 ENVELOPE',
+        src: 'assets/gifts/envelope.png',
+        note: "Happy Valentine's Day.\n\nWe may not be lovers, but that doesn't mean this day can't mean something. I just wanted to say thank you for being you - for the laughs, the silly conversations, and the comfort of knowing I can always talk to you.\n\nEven if we only talk online, our random banter, jokes, and little moments genuinely make my days better. Let's keep this energy going for as long as time allows!",
+        effect: 'hearts'
+      },
+      {
+        type: 'main',
+        title: '🌼 YELLOW FLOWERS',
+        src: 'assets/gifts/yellowflowers.png',
+        note: 'I hope your days are always as bright as these flowers! kkkk',
+        effect: 'petals'
+      },
+      {
+        type: 'main',
+        title: '🌸 PINK FLOWERS',
+        src: 'assets/gifts/pinkflowers.png',
+        note: 'Blackpink in the area.. DU DDUU DUUDU DUDUDU AYE AYEEE..',
+        effect: 'petals'
+      },
+      {
+        type: 'main',
+        title: '🍫 CHOCOLATE',
+        src: 'assets/gifts/chocolate.png',
+        note: 'Sorry, I bit it already..',
+        effect: 'sparkles'
+      },
+      {
+        type: 'main',
+        title: '🧸 MR. TEDDY',
+        src: 'assets/gifts/mr. teddy.png',
+        note: 'Mr. Teddy will always be here during your sadness!',
+        effect: 'hearts'
+      }
+    ];
+
+    // ===== SHUFFLE HELPER (Fisher-Yates) =====
+    function shuffleArray(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    // ===== ASSIGN PRIZES BY GRAB ORDER =====
+    // First 10 grabs include memes + zonks.
+    // Last 10 grabs include main gifts + zonks.
+    let grabCount = 0;
+    let grabOrderPrizes = [];
+
+    function assignPrizes() {
+      grabCount = 0;
+      const memes = shuffleArray(MEME_PRIZES);
+      const mains = shuffleArray(MAIN_PRIZES);
+
+      // Pool 1: 5 memes + 5 zonks (null) -> First 10 grabs
+      const pool1 = [...memes.slice(0, 5)];
+      for (let i = 0; i < 5; i++) pool1.push(null);
+      const shuffledPool1 = shuffleArray(pool1);
+
+      // Pool 2: 5 main gifts + 5 zonks (null) -> Next 10 grabs
+      const pool2 = [...mains.slice(0, 5)];
+      for (let i = 0; i < 5; i++) pool2.push(null);
+      const shuffledPool2 = shuffleArray(pool2);
+
+      // Combine them
+      grabOrderPrizes = [...shuffledPool1, ...shuffledPool2];
+    }
+
+    assignPrizes();
+
+    // ===== GAME STATE =====
+    const state = {
+      clawX: 120,
+      clawMinX: 8,
+      clawMaxX: 232,
+      clawStep: 20,
+      ropeBaseH: 16,
+      ropeDropH: 260,
+      isDropping: false,
+      isGrabbing: false,
+      score: 0,
+      coins: 3,
+      capsules: []
+    };
+
+    // DOM refs
+    const clawAssembly = document.getElementById('claw-assembly');
+    const clawRope = document.getElementById('claw-rope');
+    const glassWindow = document.getElementById('glass-window');
+    const coinsEl = document.getElementById('coins');
+    const messageEl = document.getElementById('message');
+
+    // ===== PHYSICS CONSTANTS =====
+    const GRAVITY = 0.25;
+    const BOUNCE = 0.45;
+    const FRICTION = 0.92;
+    const CAPSULE_SIZE = 28;
+    const GLASS_W = 280; // glass-window inner width (320 - 24 padding - 8 border)
+    const GLASS_H = 312; // glass-window inner height (320 - 8 border)
+    const FLOOR_Y = GLASS_H - CAPSULE_SIZE;
+    const WALL_L = 4;
+    const WALL_R = GLASS_W - CAPSULE_SIZE - 4;
+
+    // ===== CAPSULE DEFINITIONS (color + scale) — 20 hearts =====
+    const CAPSULE_DEFS = [
+      { color: 'color-pink', scale: 1.4 },
+      { color: 'color-rose', scale: 0.8 },
+      { color: 'color-lavender', scale: 1.0 },
+      { color: 'color-cyan', scale: 1.2 },
+      { color: 'color-white', scale: 0.7 },
+      { color: 'color-pink', scale: 0.9 },
+      { color: 'color-rose', scale: 1.5 },
+      { color: 'color-lavender', scale: 1.1 },
+      { color: 'color-cyan', scale: 0.75 },
+      { color: 'color-rose', scale: 1.3 },
+      { color: 'color-white', scale: 1.0 },
+      { color: 'color-pink', scale: 0.85 },
+      { color: 'color-lavender', scale: 1.15 },
+      { color: 'color-cyan', scale: 1.0 },
+      { color: 'color-rose', scale: 0.9 },
+      { color: 'color-pink', scale: 1.1 },
+      { color: 'color-white', scale: 0.8 },
+      { color: 'color-lavender', scale: 1.25 },
+      { color: 'color-cyan', scale: 0.95 },
+      { color: 'color-rose', scale: 1.0 },
+    ];
+
+    // ===== CAPSULE SETUP WITH PHYSICS =====
+    function createCapsules() {
+      document.querySelectorAll('.capsule').forEach(c => c.remove());
+      state.capsules = [];
+
+      CAPSULE_DEFS.forEach((def, i) => {
+        const capsule = document.createElement('div');
+        capsule.className = `capsule ${def.color}`;
+        capsule.id = `capsule-${i}`;
+        capsule.style.transform = `scale(${def.scale})`;
+        capsule.style.transformOrigin = 'center bottom';
+
+        const heart = document.createElement('div');
+        heart.className = 'capsule-heart';
+        capsule.appendChild(heart);
+
+        // Random starting X, staggered drop from above
+        const effectiveSize = CAPSULE_SIZE * def.scale;
+        const maxX = GLASS_W - effectiveSize - 4;
+        const startX = 4 + Math.random() * Math.max(0, maxX - 4);
+        const startY = -30 - (i * 35) - Math.random() * 25;
+
+        capsule.style.left = startX + 'px';
+        capsule.style.top = startY + 'px';
+
+        glassWindow.appendChild(capsule);
+        state.capsules.push({
+          el: capsule,
+          x: startX,
+          y: startY,
+          vx: (Math.random() - 0.5) * 3,
+          vy: 0,
+          grabbed: false,
+          settled: false,
+          size: effectiveSize,
+          scale: def.scale
+        });
+      });
+    }
+
+    // ===== PHYSICS LOOP =====
+    let physicsRunning = true;
+
+    function physicsStep() {
+      let allSettled = true;
+
+      for (const cap of state.capsules) {
+        if (cap.grabbed || cap.settled) continue;
+        allSettled = false;
+
+        // Gravity
+        cap.vy += GRAVITY;
+
+        // Apply velocity
+        cap.x += cap.vx;
+        cap.y += cap.vy;
+
+        // Wall bounce
+        if (cap.x <= WALL_L) {
+          cap.x = WALL_L;
+          cap.vx = Math.abs(cap.vx) * BOUNCE;
+        }
+        if (cap.x >= WALL_R) {
+          cap.x = WALL_R;
+          cap.vx = -Math.abs(cap.vx) * BOUNCE;
+        }
+
+        // Floor Y per capsule (accounts for size)
+        const capFloor = GLASS_H - cap.size;
+        if (cap.y >= capFloor) {
+          cap.y = capFloor;
+          cap.vy = -cap.vy * BOUNCE;
+          cap.vx *= FRICTION;
+          if (Math.abs(cap.vy) < 0.5) cap.vy = 0;
+        }
+
+        // Heart-to-heart collision (simple push apart)
+        for (const other of state.capsules) {
+          if (other === cap || other.grabbed) continue;
+          const dx = cap.x - other.x;
+          const dy = cap.y - other.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const minDist = (cap.size + other.size) * 0.4;
+
+          if (dist < minDist && dist > 0) {
+            const overlap = minDist - dist;
+            const nx = dx / dist;
+            const ny = dy / dist;
+            cap.x += nx * overlap * 0.5;
+            cap.y += ny * overlap * 0.5;
+            if (!other.settled) {
+              other.x -= nx * overlap * 0.5;
+              other.y -= ny * overlap * 0.5;
+            }
+            // Bounce off each other
+            cap.vx += nx * 0.5;
+            cap.vy += ny * 0.3;
+          }
+        }
+
+        // Clamp to bounds
+        const capWallR = GLASS_W - cap.size - 4;
+        const capFloorY = GLASS_H - cap.size;
+        cap.x = Math.max(WALL_L, Math.min(capWallR, cap.x));
+        cap.y = Math.min(capFloorY, cap.y);
+
+        // Check if settled
+        if (cap.y >= capFloorY - 1 && Math.abs(cap.vy) < 0.3 && Math.abs(cap.vx) < 0.3) {
+          cap.vx = 0;
+          cap.vy = 0;
+          cap.settled = true;
+        }
+
+        // Update DOM
+        cap.el.style.left = cap.x + 'px';
+        cap.el.style.top = cap.y + 'px';
+      }
+
+      if (!allSettled) {
+        requestAnimationFrame(physicsStep);
+      } else {
+        physicsRunning = false;
+      }
+    }
+
+    createCapsules();
+    requestAnimationFrame(physicsStep);
+
+    // ===== CLAW MOVEMENT =====
+    function moveClaw(dir) {
+      if (state.isDropping || state.isGrabbing) return;
+      if (state.coins <= 0) {
+        sfxError();
+        showMessage('NO COINS LEFT!');
+        return;
+      }
+
+      if (dir === 'left') {
+        state.clawX = Math.max(state.clawMinX, state.clawX - state.clawStep);
+      } else if (dir === 'right') {
+        state.clawX = Math.min(state.clawMaxX, state.clawX + state.clawStep);
+      }
+
+      sfxClawMove();
+      clawAssembly.style.left = state.clawX + 'px';
+    }
+
+    // ===== GRAB ACTION =====
+    function grab() {
+      if (state.isDropping || state.isGrabbing) return;
+      if (state.coins <= 0) {
+        sfxError();
+        showMessage('NO COINS LEFT!');
+        return;
+      }
+
+      sfxButtonPress();
+      state.coins--;
+      coinsEl.textContent = state.coins;
+      state.isDropping = true;
+
+      showMessage('DROPPING...');
+      clawAssembly.classList.add('dropping');
+
+      // Claw drop sound
+      sfxClawDrop();
+      clawRope.style.height = state.ropeDropH + 'px';
+
+      setTimeout(() => {
+        state.isGrabbing = true;
+        clawAssembly.classList.add('grabbed');
+        sfxClawGrab();
+        showMessage('GRABBING...');
+
+        const clawCenterX = state.clawX + 20;
+        let caught = null;
+        let closestDist = Infinity;
+
+        for (const cap of state.capsules) {
+          if (cap.grabbed) continue;
+          const capCenterX = cap.x + 14;
+          const dist = Math.abs(clawCenterX - capCenterX);
+          if (dist < 28 && dist < closestDist) {
+            closestDist = dist;
+            caught = cap;
+          }
+        }
+
+        const success = caught && Math.random() < 0.7;
+
+        setTimeout(() => {
+          sfxClawRetract();
+          clawRope.style.height = state.ropeBaseH + 'px';
+
+          if (success && caught) {
+            caught.grabbed = true;
+            caught.settled = true;
+            caught.el.style.transition = 'top 0.3s steps(6), left 0.3s steps(6)';
+            caught.el.style.top = '24px';
+            caught.el.style.left = (state.clawX + 6) + 'px';
+          }
+
+          setTimeout(() => {
+            clawAssembly.classList.remove('dropping');
+            clawAssembly.classList.remove('grabbed');
+            state.isDropping = false;
+            state.isGrabbing = false;
+
+            if (success && caught) {
+              state.score += 100;
+              caught.el.style.display = 'none';
+              spawnWinHearts();
+              sfxWin();
+              showMessage('\u2665 YOU GOT ONE! \u2665');
+
+              // Reveal prize after short delay
+              const capsuleIndex = state.capsules.indexOf(caught);
+              setTimeout(() => revealPrize(capsuleIndex), 800);
+
+              setTimeout(() => {
+                if (state.coins > 0) {
+                  showMessage('TRY AGAIN!');
+                } else {
+                  showMessage('GAME OVER! TAP COIN');
+                  messageEl.classList.add('blink');
+                }
+              }, 2000);
+            } else {
+              sfxMiss();
+              showMessage('SO CLOSE...');
+              setTimeout(() => {
+                if (state.coins > 0) {
+                  showMessage('TRY AGAIN!');
+                } else {
+                  showMessage('GAME OVER! TAP COIN');
+                  messageEl.classList.add('blink');
+                }
+              }, 1500);
+            }
+          }, 500);
+        }, 600);
+      }, 500);
+    }
+
+    // ===== WIN HEARTS =====
+    function spawnWinHearts() {
+      for (let i = 0; i < 5; i++) {
+        const heart = document.createElement('div');
+        heart.className = 'win-heart';
+        heart.style.left = (140 + Math.random() * 100) + 'px';
+        heart.style.top = (300 + Math.random() * 40) + 'px';
+        heart.style.fontSize = '16px';
+        heart.style.color = ['#FF4D7D', '#FFA6C0', '#FFD700'][Math.floor(Math.random() * 3)];
+        heart.textContent = '♥';
+        heart.style.animationDelay = (i * 0.12) + 's';
+        document.getElementById('game-wrapper').appendChild(heart);
+
+        setTimeout(() => heart.remove(), 1200);
+      }
+    }
+
+    // ===== MESSAGE =====
+    function showMessage(msg) {
+      messageEl.classList.remove('blink');
+      messageEl.textContent = msg;
+    }
+
+    // ===== PRIZE MODAL =====
+    const prizeOverlay = document.getElementById('prize-modal-overlay');
+    // Using simple innerHTML replacement, simpler than separate robust elements now
+
+    // Track whether we're in the floating gift phase
+    let floatingPrizeIndex = -1;
+    let mpWasPlaying = false; // Track if music was playing before a video meme
+    let gameComplete = false; // Track if all hearts are grabbed
+
+    function revealPrize(capsuleIndex) {
+      // Use grab order, not capsule position
+      const currentGrab = grabCount;
+      grabCount++;
+      const prize = grabOrderPrizes[currentGrab] || null;
+      if (!prize) {
+        // ZONK — no modal
+        showMessage('BETTER LUCK NEXT TIME!');
+        messageEl.classList.add('zonk-shake');
+        sfxMiss();
+        setTimeout(() => messageEl.classList.remove('zonk-shake'), 1000);
+        // Check game complete even for zonks
+        setTimeout(() => checkGameComplete(), 1200);
+        return;
+      }
+
+      if (prize.type === 'main') {
+        // Step 1: Show floating gift, click anywhere opens card
+        showFloatingGift(prize);
+      } else {
+        // Memes open directly
+        floatingPrizeIndex = -1;
+        showPrizeModal(prize);
+      }
+      prizeOverlay.classList.add('active');
+    }
+
+    let floatingPrize = null; // the prize object for the floating gift
+
+    function showFloatingGift(prize) {
+      floatingPrizeIndex = 1; // just a truthy flag
+      floatingPrize = prize;
+      prizeOverlay.innerHTML = `
+        <div class="floating-gift-container">
+          <img src="${prize.src}" class="floating-gift-icon" alt="${prize.title}">
+          <div class="click-hint">▼ TAP TO OPEN ▼</div>
+        </div>
+      `;
+    }
+
+    function openFloatingGift() {
+      if (floatingPrizeIndex < 0 || !floatingPrize) return;
+      const prize = floatingPrize;
+      floatingPrizeIndex = -1;
+      floatingPrize = null;
+      spawnGiftEffect(prize.effect);
+      showPrizeModal(prize);
+    }
+
+    function showPrizeModal(prize) {
+      let html = `<div id="prize-modal"><button class="modal-close" onclick="closeModal()">X</button>`;
+
+      html += `<div class="modal-title">${prize.title}</div>`;
+
+      if (prize.type === 'main') {
+        html += `<img class="modal-image" src="${prize.src}" alt="${prize.title}">`;
+        html += `<div class="modal-note">${prize.note.replace(/\n/g, '<br>')}</div>`;
+      } else {
+        if (prize.content === 'link') {
+          html += `<div class="modal-note">${prize.note}<br><br><a href="${prize.url}" target="_blank" class="modal-link">${prize.url}</a></div>`;
+        } else if (prize.content === 'image') {
+          html += `<img class="modal-image" src="${prize.src}" alt="meme">`;
+          if (prize.note) html += `<div class="modal-note">${prize.note}</div>`;
+        } else if (prize.content === 'video') {
+          // Pause background music during video
+          if (typeof mpAudio !== 'undefined' && !mpAudio.paused) {
+            mpWasPlaying = true;
+            mpAudio.pause();
+            mpPlayBtn.textContent = '\u25B6';
+          }
+          html += `<video class="modal-video" src="${prize.src}" autoplay loop playsinline controls></video>`;
+          if (prize.note) html += `<div class="modal-note">${prize.note}</div>`;
+        }
+        spawnMemeParticles();
+      }
+      html += `</div>`;
+      prizeOverlay.innerHTML = html;
+    }
+
+    function closeModal() {
+      floatingPrizeIndex = -1;
+      prizeOverlay.classList.remove('active');
+      prizeOverlay.innerHTML = '';
+      // Resume music if it was playing before a video meme
+      if (mpWasPlaying) {
+        mpWasPlaying = false;
+        mpAudio.play();
+        mpPlayBtn.textContent = '\u275A\u275A';
+      }
+      // Check if all hearts are grabbed
+      checkGameComplete();
+    }
+
+    // Global close for the inline onclicks
+    window.closeModal = closeModal;
+
+    // ===== GAME COMPLETE CHECK =====
+    const congratsOverlay = document.getElementById('congrats-overlay');
+
+    function checkGameComplete() {
+      if (gameComplete) return; // Already shown
+      const remaining = state.capsules.filter(c => !c.grabbed);
+      if (remaining.length === 0) {
+        gameComplete = true;
+        // All hearts grabbed! Show congrats after a short delay
+        setTimeout(() => {
+          congratsOverlay.classList.add('active');
+          spawnConfetti();
+        }, 500);
+      }
+    }
+
+    function spawnConfetti() {
+      const colors = ['#FF4D7D', '#FFD700', '#4DEEEA', '#FFA6C0', '#FF6B6B', '#48BB78', '#9F7AEA', '#F6E05E'];
+      for (let i = 0; i < 80; i++) {
+        setTimeout(() => {
+          const piece = document.createElement('div');
+          piece.className = 'confetti-piece';
+          piece.style.left = Math.random() * 100 + 'vw';
+          piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+          piece.style.width = (4 + Math.random() * 8) + 'px';
+          piece.style.height = (4 + Math.random() * 8) + 'px';
+          piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+          piece.style.animationDuration = (2 + Math.random() * 3) + 's';
+          piece.style.animationDelay = '0s';
+          document.body.appendChild(piece);
+          setTimeout(() => piece.remove(), 5000);
+        }, i * 50);
+      }
+    }
+
+    function restartGame() {
+      congratsOverlay.classList.remove('active');
+      gameComplete = false;
+      // Remove old capsule elements
+      state.capsules.forEach(c => c.el.remove());
+      state.capsules = [];
+      state.score = 0;
+      state.coins = 3;
+      coinsEl.textContent = state.coins;
+      state.clawX = 120;
+      clawAssembly.style.left = state.clawX + 'px';
+      clawRope.style.height = state.ropeBaseH + 'px';
+      state.isDropping = false;
+      state.isGrabbing = false;
+      // Recreate capsules and prizes
+      createCapsules();
+      assignPrizes();
+      physicsRunning = true;
+      requestAnimationFrame(physicsStep);
+      showMessage('READY TO PLAY!');
+    }
+
+    document.getElementById('restart-btn').addEventListener('click', () => restartGame());
+
+    prizeOverlay.addEventListener('click', (e) => {
+      // If we're in the floating gift phase, clicking anywhere opens the card
+      if (floatingPrizeIndex >= 0) {
+        openFloatingGift();
+        return;
+      }
+      // Otherwise, clicking the background closes the modal
+      if (e.target === prizeOverlay) closeModal();
+    });
+
+    // ===== PARTICLE EFFECTS =====
+    function spawnMemeParticles() {
+      const emojis = ['😂', '🤣', '💀', '😭', '🫠'];
+      for (let i = 0; i < 15; i++) {
+        setTimeout(() => {
+          const p = document.createElement('div');
+          p.className = 'particle';
+          p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+          p.style.left = Math.random() * 100 + 'vw';
+          p.style.top = '-20px';
+          p.style.fontSize = (12 + Math.random() * 16) + 'px';
+          p.style.animationDuration = (2 + Math.random() * 2) + 's';
+          document.body.appendChild(p);
+          setTimeout(() => p.remove(), 4000);
+        }, i * 120);
+      }
+    }
+
+    function spawnGiftEffect(effectType) {
+      if (effectType === 'hearts') {
+        const symbols = ['♥', '💕', '💗', '💖', '💝'];
+        for (let i = 0; i < 20; i++) {
+          setTimeout(() => {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            p.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+            p.style.left = Math.random() * 100 + 'vw';
+            p.style.top = '-20px';
+            p.style.fontSize = (14 + Math.random() * 18) + 'px';
+            p.style.animationDuration = (2.5 + Math.random() * 2.5) + 's';
+            document.body.appendChild(p);
+            setTimeout(() => p.remove(), 5000);
+          }, i * 100);
+        }
+      } else if (effectType === 'petals') {
+        const petals = ['🌸', '🌺', '🌼', '💮', '🏵️'];
+        for (let i = 0; i < 25; i++) {
+          setTimeout(() => {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            p.textContent = petals[Math.floor(Math.random() * petals.length)];
+            p.style.left = Math.random() * 100 + 'vw';
+            p.style.top = '-20px';
+            p.style.fontSize = (10 + Math.random() * 14) + 'px';
+            p.style.animationDuration = (3 + Math.random() * 3) + 's';
+            document.body.appendChild(p);
+            setTimeout(() => p.remove(), 6000);
+          }, i * 80);
+        }
+      } else if (effectType === 'sparkles') {
+        const sparkles = ['✨', '⭐', '🌟', '💫', '🍫'];
+        for (let i = 0; i < 20; i++) {
+          setTimeout(() => {
+            const p = document.createElement('div');
+            p.className = 'sparkle-particle';
+            p.textContent = sparkles[Math.floor(Math.random() * sparkles.length)];
+            p.style.left = (20 + Math.random() * 60) + 'vw';
+            p.style.top = (10 + Math.random() * 80) + 'vh';
+            p.style.fontSize = (14 + Math.random() * 16) + 'px';
+            document.body.appendChild(p);
+            setTimeout(() => p.remove(), 1000);
+          }, i * 150);
+        }
+      }
+    }
+
+    // ===== ADD COINS =====
+    function addCoin() {
+      if (state.isDropping || state.isGrabbing) return;
+      if (gameComplete) return; // Don't add coins if game is complete
+      sfxCoinInsert();
+      state.coins += 3;
+      coinsEl.textContent = state.coins;
+      showMessage('COINS INSERTED!');
+
+      const remaining = state.capsules.filter(c => !c.grabbed);
+      if (remaining.length === 0) {
+        createCapsules();
+        assignPrizes(); // Re-randomize prizes for new set
+        physicsRunning = true;
+        requestAnimationFrame(physicsStep);
+        sfxReload();
+        showMessage('NEW PRIZES LOADED!');
+      }
+
+      setTimeout(() => {
+        showMessage('READY TO PLAY!');
+      }, 1200);
+    }
+
+    // ===== EVENT LISTENERS =====
+    // Use a helper to prevent double-firing on mobile (touch + click)
+    let lastTouchTime = 0;
+
+    function onAction(fn) {
+      return (e) => {
+        // If a touch just happened, ignore the follow-up click
+        if (e.type === 'click' && Date.now() - lastTouchTime < 500) return;
+        if (e.type === 'touchstart' || e.type === 'touchend') {
+          lastTouchTime = Date.now();
+          e.preventDefault();
+        }
+        fn();
+      };
+    }
+
+    const btnLeft = document.getElementById('btn-left');
+    const btnRight = document.getElementById('btn-right');
+    const btnGrab = document.getElementById('btn-grab');
+    const coinSlot = document.getElementById('coin-slot');
+
+    btnLeft.addEventListener('click', onAction(() => moveClaw('left')));
+    btnRight.addEventListener('click', onAction(() => moveClaw('right')));
+    btnGrab.addEventListener('click', onAction(grab));
+    coinSlot.addEventListener('click', onAction(addCoin));
+
+    // Touch: grab and coin
+    btnGrab.addEventListener('touchstart', onAction(grab), { passive: false });
+    coinSlot.addEventListener('touchstart', onAction(addCoin), { passive: false });
+
+    // Keyboard support
+    document.addEventListener('keydown', (e) => {
+      switch (e.key) {
+        case 'ArrowLeft': moveClaw('left'); break;
+        case 'ArrowRight': moveClaw('right'); break;
+        case 'ArrowDown': grab(); break;
+        case ' ': grab(); break;
+      }
+    });
+
+    // Touch hold for continuous movement (left/right)
+    let moveInterval = null;
+
+    function startMove(dir) {
+      lastTouchTime = Date.now();
+      moveClaw(dir);
+      moveInterval = setInterval(() => moveClaw(dir), 150);
+    }
+
+    function stopMove() {
+      if (moveInterval) {
+        clearInterval(moveInterval);
+        moveInterval = null;
+      }
+    }
+
+    btnLeft.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      startMove('left');
+    }, { passive: false });
+    btnLeft.addEventListener('touchend', stopMove);
+
+    btnRight.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      startMove('right');
+    }, { passive: false });
+    btnRight.addEventListener('touchend', stopMove);
+
+    // ===== MUSIC PLAYER =====
+    const mpPlaylist = [
+      { title: 'Bruno Major - Nothing', src: 'assets/songs/Bruno Major - Nothing (Lyrics).mp3' },
+      { title: 'Bruno Major - The Most Beautiful Thing', src: 'assets/songs/Bruno Major - The Most Beautiful Thing lyrics.mp3' },
+    ];
+    let mpIndex = 0;
+    const mpAudio = new Audio();
+    mpAudio.volume = 0.5;
+    const mpPlayBtn = document.getElementById('mp-play');
+    const mpPrevBtn = document.getElementById('mp-prev');
+    const mpNextBtn = document.getElementById('mp-next');
+    const mpTitleEl = document.getElementById('mp-title');
+    const mpTimeEl = document.getElementById('mp-time');
+    const mpProgressBar = document.getElementById('mp-progress-bar');
+    const mpProgressFill = document.getElementById('mp-progress-fill');
+    const mpVolumeSlider = document.getElementById('mp-volume');
+    const mpVolIcon = document.getElementById('mp-vol-icon');
+
+    function mpLoadSong(index) {
+      mpIndex = ((index % mpPlaylist.length) + mpPlaylist.length) % mpPlaylist.length;
+      const song = mpPlaylist[mpIndex];
+      mpAudio.src = song.src;
+      mpTitleEl.textContent = song.title;
+    }
+
+    function mpTogglePlay() {
+      if (mpAudio.paused) {
+        if (!mpAudio.src || mpAudio.src === window.location.href) mpLoadSong(0);
+        mpAudio.play();
+        mpPlayBtn.textContent = '\u275A\u275A';
+      } else {
+        mpAudio.pause();
+        mpPlayBtn.textContent = '\u25B6';
+      }
+    }
+
+    function mpNext() { mpLoadSong(mpIndex + 1); mpAudio.play(); mpPlayBtn.textContent = '\u275A\u275A'; }
+    function mpPrev() { mpLoadSong(mpIndex - 1); mpAudio.play(); mpPlayBtn.textContent = '\u275A\u275A'; }
+
+    mpAudio.addEventListener('ended', () => mpNext());
+
+    mpAudio.addEventListener('timeupdate', () => {
+      if (!mpAudio.duration) return;
+      const pct = (mpAudio.currentTime / mpAudio.duration) * 100;
+      mpProgressFill.style.width = pct + '%';
+      mpTimeEl.textContent = fmtTime(mpAudio.currentTime) + ' / ' + fmtTime(mpAudio.duration);
+    });
+
+    function fmtTime(s) {
+      const m = Math.floor(s / 60);
+      const sec = Math.floor(s % 60);
+      return m + ':' + (sec < 10 ? '0' : '') + sec;
+    }
+
+    // Seek on progress bar click
+    mpProgressBar.addEventListener('click', (e) => {
+      if (!mpAudio.duration) return;
+      const rect = mpProgressBar.getBoundingClientRect();
+      const pct = (e.clientX - rect.left) / rect.width;
+      mpAudio.currentTime = pct * mpAudio.duration;
+    });
+
+    // Volume
+    mpVolumeSlider.addEventListener('input', (e) => {
+      mpAudio.volume = e.target.value / 100;
+      mpVolIcon.textContent = mpAudio.volume === 0 ? '\uD83D\uDD07' : '\uD83D\uDD0A';
+    });
+
+    mpVolIcon.addEventListener('click', () => {
+      if (mpAudio.volume > 0) {
+        mpAudio._prevVol = mpAudio.volume;
+        mpAudio.volume = 0;
+        mpVolumeSlider.value = 0;
+        mpVolIcon.textContent = '\uD83D\uDD07';
+      } else {
+        mpAudio.volume = mpAudio._prevVol || 0.5;
+        mpVolumeSlider.value = mpAudio.volume * 100;
+        mpVolIcon.textContent = '\uD83D\uDD0A';
+      }
+    });
+
+    // Music player uses click only (NOT onAction) — browsers need a real click to unlock audio
+    mpPlayBtn.addEventListener('click', () => mpTogglePlay());
+    mpNextBtn.addEventListener('click', () => mpNext());
+    mpPrevBtn.addEventListener('click', () => mpPrev());
+
+    // Initial state
+    clawAssembly.style.left = state.clawX + 'px';
+    clawRope.style.height = state.ropeBaseH + 'px';
+
+    // ===== AUTO-SCALE TO FIT VIEWPORT =====
+    const DESIGN_W = 390;
+    const DESIGN_H = 844;
+    const wrapper = document.getElementById('game-wrapper');
+
+    function autoScale() {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const scale = Math.min(vw / DESIGN_W, vh / DESIGN_H, 1);
+      wrapper.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    }
+
+    autoScale();
+    window.addEventListener('resize', autoScale);
+  </script>
+
+</body>
+
+</html>
