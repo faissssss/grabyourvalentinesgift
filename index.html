@@ -71,8 +71,8 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 390px;
-      height: 844px;
+      width: 360px;
+      height: 720px;
       z-index: 1;
       display: flex;
       flex-direction: column;
@@ -2325,14 +2325,14 @@
     clawRope.style.height = state.ropeBaseH + 'px';
 
     // ===== AUTO-SCALE TO FIT VIEWPORT =====
-    const DESIGN_W = 390;
-    const DESIGN_H = 844;
+    const DESIGN_W = 360;
+    const DESIGN_H = 720;
     const wrapper = document.getElementById('game-wrapper');
 
     function autoScale() {
       const vw = window.innerWidth;
       const vh = window.innerHeight;
-      const scale = Math.min(vw / DESIGN_W, vh / DESIGN_H, 1);
+      const scale = Math.min(vw / DESIGN_W, vh / DESIGN_H);
       wrapper.style.transform = `translate(-50%, -50%) scale(${scale})`;
     }
 
